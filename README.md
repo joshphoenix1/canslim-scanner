@@ -8,7 +8,7 @@ A real-time stock scanner based on William O'Neil's CANSLIM methodology, featuri
 
 ## 🚀 Live Demo
 
-**[View Live Scanner](https://YOUR_USERNAME.github.io/canslim-scanner/)**
+**[View Live Scanner](https://joshphoenix1.github.io/canslim-scanner/)**
 
 *(Replace YOUR_USERNAME with your GitHub username after setup)*
 
