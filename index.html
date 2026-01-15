@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CANSLIM Stock Scanner - Live Charts</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'JetBrains Mono', 'SF Mono', monospace;
+      background-color: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background: linear-gradient(180deg, #161b22 0%, #0d1117 100%);
+      border-bottom: 1px solid #21262d;
+      height: 44px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo-icon { color: #f0883e; font-size: 18px; }
+
+    .live-badge {
+      font-size: 9px;
+      color: #3fb950;
+      padding: 2px 6px;
+      background: rgba(63, 185, 80, 0.15);
+      border: 1px solid #3fb950;
+      border-radius: 4px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+
+    .last-updated {
+      font-size: 10px;
+      color: #8b949e;
+    }
+
+    .timestamp { font-size: 11px; color: #8b949e; }
+
+    .main-content {
+      display: flex;
+      height: calc(100vh - 44px);
+    }
+
+    .left-panel {
+      width: 25%;
+      min-width: 280px;
+      max-width: 400px;
+      border-right: 1px solid #21262d;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .stock-count { font-size: 11px; color: #58a6ff; font-weight: 600; }
+
+    .filter-buttons { display: flex; gap: 3px; flex-wrap: wrap; }
+
+    .filter-btn {
+      padding: 2px 6px;
+      font-size: 9px;
+      background: transparent;
+      border: 1px solid #30363d;
+      border-radius: 3px;
+      color: #8b949e;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover { background: #21262d; }
+    .filter-btn.active { background: #21262d; border-color: #58a6ff; color: #58a6ff; }
+
+    .table-container { flex: 1; overflow: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 10px; }
+
+    th {
+      position: sticky;
+      top: 0;
+      padding: 6px 4px;
+      text-align: left;
+      background: #161b22;
+      border-bottom: 2px solid #30363d;
+      color: #8b949e;
+      font-weight: 600;
+      font-size: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover { color: #58a6ff; }
+    .sort-arrow { color: #58a6ff; font-size: 7px; margin-left: 2px; }
+
+    tbody tr { cursor: pointer; transition: background 0.15s; }
+    tbody tr:nth-child(even) { background: rgba(22, 27, 34, 0.5); }
+    tbody tr:hover { background: rgba(88, 166, 255, 0.08) !important; }
+    tbody tr.selected { background: rgba(88, 166, 255, 0.15) !important; box-shadow: inset 3px 0 0 #58a6ff; }
+
+    td { padding: 5px 4px; border-bottom: 1px solid #21262d; font-size: 10px; }
+
+    .symbol-cell { display: flex; flex-direction: column; gap: 1px; }
+    .symbol-text { font-weight: 700; color: #e6edf3; font-size: 11px; }
+    .sector-badge { font-size: 7px; color: #8b949e; text-transform: uppercase; }
+
+    .rating-green { color: #00c853; }
+    .rating-light-green { color: #69f0ae; }
+    .rating-yellow { color: #ffd600; }
+    .rating-orange { color: #ff9100; }
+    .rating-red { color: #ff5252; }
+
+    .chart-section { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .chart-title { display: flex; align-items: center; gap: 12px; }
+    .chart-symbol { font-size: 18px; font-weight: 700; color: #e6edf3; }
+    .chart-name { font-size: 11px; color: #8b949e; }
+    .chart-industry { font-size: 10px; color: #58a6ff; padding: 2px 6px; background: rgba(88, 166, 255, 0.1); border-radius: 3px; }
+
+    .chart-ratings {
+      display: flex;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+      flex-wrap: wrap;
+    }
+
+    .rating-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      background: #161b22;
+      border-radius: 4px;
+      border: 1px solid #21262d;
+    }
+
+    .rating-label { font-size: 8px; color: #8b949e; text-transform: uppercase; }
+    .rating-value { font-size: 12px; font-weight: 700; }
+
+    .timeframe-selector { display: flex; gap: 4px; }
+
+    .timeframe-btn {
+      padding: 4px 10px;
+      font-size: 10px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #8b949e;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .timeframe-btn:hover { background: #30363d; color: #e6edf3; }
+    .timeframe-btn.active { background: #58a6ff; border-color: #58a6ff; color: #fff; }
+
+    .chart-container { flex: 1; min-height: 400px; position: relative; background: #0d1117; }
+    .chart-container iframe { width: 100% !important; height: 100% !important; border: none; }
+
+    .info-panel {
+      height: 25%;
+      min-height: 150px;
+      max-height: 250px;
+      display: flex;
+      border-top: 1px solid #21262d;
+      background: #161b22;
+    }
+
+    .info-widget {
+      flex: 1;
+      border-right: 1px solid #21262d;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .info-widget:last-child { border-right: none; }
+    .info-widget iframe { width: 100% !important; height: 100% !important; border: none; }
+
+    .widget-label {
+      position: absolute;
+      top: 4px;
+      left: 8px;
+      font-size: 8px;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      z-index: 10;
+      background: rgba(22, 27, 34, 0.9);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #0d1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .loading-overlay.hidden { display: none; }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #21262d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-message {
+      padding: 20px;
+      text-align: center;
+      color: #f85149;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <h1 class="logo">
+        <span class="logo-icon">◆</span>
+        CANSLIM SCANNER
+      </h1>
+      <span class="live-badge">● LIVE</span>
+    </div>
+    <div class="header-right">
+      <div id="last-updated" class="last-updated">Loading data...</div>
+      <div id="timestamp" class="timestamp"></div>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <div class="left-panel">
+      <div class="filter-bar">
+        <span id="stock-count" class="stock-count">-- Stocks</span>
+        <div id="filter-buttons" class="filter-buttons"></div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="symbol">Symbol</th>
+              <th data-sort="compositeRating">Comp</th>
+              <th data-sort="epsRating">EPS</th>
+              <th data-sort="rsRating">RS</th>
+              <th data-sort="accDisRating">A/D</th>
+              <th data-sort="groupRank">Grp</th>
+            </tr>
+          </thead>
+          <tbody id="stock-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title">
+            <span id="chart-symbol" class="chart-symbol">--</span>
+            <span id="chart-name" class="chart-name">Loading...</span>
+            <span id="chart-industry" class="chart-industry">--</span>
+          </div>
+          <div class="timeframe-selector">
+            <button class="timeframe-btn" data-interval="1">1m</button>
+            <button class="timeframe-btn" data-interval="5">5m</button>
+            <button class="timeframe-btn" data-interval="15">15m</button>
+            <button class="timeframe-btn" data-interval="60">1H</button>
+            <button class="timeframe-btn" data-interval="240">4H</button>
+            <button class="timeframe-btn active" data-interval="D">1D</button>
+            <button class="timeframe-btn" data-interval="W">1W</button>
+            <button class="timeframe-btn" data-interval="M">1M</button>
+          </div>
+        </div>
+
+        <div id="chart-ratings" class="chart-ratings"></div>
+
+        <div class="chart-container">
+          <div id="chart-loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+          </div>
+          <div id="tradingview-chart" style="width:100%;height:100%;"></div>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <div class="info-widget">
+          <span class="widget-label">Technical Analysis</span>
+          <div id="technical-widget"></div>
+        </div>
+        <div class="info-widget">
+          <span class="widget-label">Company Profile</span>
+          <div id="profile-widget"></div>
+        </div>
+        <div class="info-widget">
+          <span class="widget-label">Financials</span>
+          <div id="financials-widget"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <script>
+    // State
+    let stocks = [];
+    let selectedStock = null;
+    let sortConfig = { key: 'compositeRating', direction: 'desc' };
+    let currentFilter = 'all';
+    let currentInterval = 'D';
+    let tvWidget = null;
+
+    // NYSE listed symbols
+    const NYSE_SYMBOLS = ['NVO', 'GS', 'V', 'MA', 'CAT', 'XOM', 'CVX', 'UNH', 'LMT', 'ICE', 'BLK', 'SPGI', 'GE', 'HON', 'LLY', 'BSX', 'SYK', 'WMT', 'COST', 'BKNG', 'ORLY', 'CMG'];
+
+    // Load data from JSON file
+    async function loadData() {
+      try {
+        const response = await fetch('data/stocks.json');
+        if (!response.ok) throw new Error('Failed to load data');
+        
+        const data = await response.json();
+        stocks = data.stocks || [];
+        
+        // Update last updated timestamp
+        const updated = new Date(data.lastUpdated);
+        document.getElementById('last-updated').textContent = `Data: ${updated.toLocaleDateString()} ${updated.toLocaleTimeString()}`;
+        
+        if (stocks.length === 0) {
+          document.getElementById('stock-table-body').innerHTML = '<tr><td colspan="6" class="error-message">No data available. Waiting for first data fetch...</td></tr>';
+          return;
+        }
+        
+        selectedStock = stocks[0];
+        renderFilterButtons();
+        renderTable();
+        updateAllWidgets();
+      } catch (error) {
+        console.error('Error loading data:', error);
+        document.getElementById('last-updated').textContent = 'Error loading data';
+        document.getElementById('stock-table-body').innerHTML = `<tr><td colspan="6" class="error-message">Error: ${error.message}</td></tr>`;
+      }
+    }
+
+    // Get exchange for symbol
+    function getExchange(symbol) {
+      return NYSE_SYMBOLS.includes(symbol) ? 'NYSE' : 'NASDAQ';
+    }
+
+    // TradingView Chart
+    function loadChart(symbol, interval) {
+      const container = document.getElementById('tradingview-chart');
+      const loading = document.getElementById('chart-loading');
+      
+      loading.classList.remove('hidden');
+      container.innerHTML = '';
+      
+      if (tvWidget) {
+        try { tvWidget.remove(); } catch (e) {}
+        tvWidget = null;
+      }
+
+      const exchange = getExchange(symbol);
+
+      tvWidget = new TradingView.widget({
+        symbol: `${exchange}:${symbol}`,
+        interval: interval,
+        timezone: 'America/New_York',
+        theme: 'dark',
+        style: '1',
+        locale: 'en',
+        toolbar_bg: '#161b22',
+        enable_publishing: false,
+        allow_symbol_change: false,
+        save_image: false,
+        container_id: 'tradingview-chart',
+        autosize: true,
+        hide_side_toolbar: false,
+        studies: [
+          { id: 'MASimple@tv-basicstudies', inputs: { length: 10 } },
+          { id: 'MASimple@tv-basicstudies', inputs: { length: 21 } },
+          { id: 'MASimple@tv-basicstudies', inputs: { length: 50 } },
+          { id: 'Volume@tv-basicstudies' }
+        ],
+        overrides: {
+          'paneProperties.background': '#0d1117',
+          'paneProperties.backgroundType': 'solid',
+          'scalesProperties.backgroundColor': '#0d1117',
+          'mainSeriesProperties.candleStyle.upColor': '#26a69a',
+          'mainSeriesProperties.candleStyle.downColor': '#ef5350',
+          'mainSeriesProperties.candleStyle.borderUpColor': '#26a69a',
+          'mainSeriesProperties.candleStyle.borderDownColor': '#ef5350',
+          'mainSeriesProperties.candleStyle.wickUpColor': '#26a69a',
+          'mainSeriesProperties.candleStyle.wickDownColor': '#ef5350',
+        },
+        loading_screen: { backgroundColor: '#0d1117', foregroundColor: '#58a6ff' },
+      });
+
+      setTimeout(() => loading.classList.add('hidden'), 1500);
+    }
+
+    function loadTechnicalAnalysis(symbol) {
+      const container = document.getElementById('technical-widget');
+      container.innerHTML = '';
+      const exchange = getExchange(symbol);
+
+      const widget = document.createElement('div');
+      widget.className = 'tradingview-widget-container';
+      widget.innerHTML = `
+        <div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js" async>
+        { "interval": "1D", "width": "100%", "height": "100%", "symbol": "${exchange}:${symbol}", "showIntervalTabs": false, "locale": "en", "colorTheme": "dark", "isTransparent": true }
+        <\/script>
+      `;
+      container.appendChild(widget);
+    }
+
+    function loadSymbolProfile(symbol) {
+      const container = document.getElementById('profile-widget');
+      container.innerHTML = '';
+      const exchange = getExchange(symbol);
+
+      const widget = document.createElement('div');
+      widget.className = 'tradingview-widget-container';
+      widget.innerHTML = `
+        <div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-profile.js" async>
+        { "width": "100%", "height": "100%", "symbol": "${exchange}:${symbol}", "colorTheme": "dark", "isTransparent": true, "locale": "en" }
+        <\/script>
+      `;
+      container.appendChild(widget);
+    }
+
+    function loadFinancials(symbol) {
+      const container = document.getElementById('financials-widget');
+      container.innerHTML = '';
+      const exchange = getExchange(symbol);
+
+      const widget = document.createElement('div');
+      widget.className = 'tradingview-widget-container';
+      widget.innerHTML = `
+        <div class="tradingview-widget-container__widget"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-financials.js" async>
+        { "symbol": "${exchange}:${symbol}", "colorTheme": "dark", "isTransparent": true, "largeChartUrl": "", "displayMode": "compact", "width": "100%", "height": "100%", "locale": "en" }
+        <\/script>
+      `;
+      container.appendChild(widget);
+    }
+
+    // UI Helpers
+    function getRatingColor(value, type) {
+      if (type === 'accDis') {
+        const colors = { 'A': 'rating-green', 'A-': 'rating-light-green', 'B+': 'rating-light-green', 'B': 'rating-yellow', 'B-': 'rating-orange', 'C+': 'rating-orange', 'C': 'rating-orange', 'C-': 'rating-orange', 'D': 'rating-red', 'E': 'rating-red' };
+        return colors[value] || '';
+      }
+      if (type === 'group') {
+        if (value <= 30) return 'rating-green';
+        if (value <= 60) return 'rating-yellow';
+        return 'rating-orange';
+      }
+      if (value >= 90) return 'rating-green';
+      if (value >= 80) return 'rating-light-green';
+      if (value >= 70) return 'rating-yellow';
+      return 'rating-orange';
+    }
+
+    function getRatingHexColor(value, type) {
+      if (type === 'letter') {
+        const colors = { 'A': '#00c853', 'B': '#ffd600', 'C': '#ff9100', 'D': '#ff5252', 'E': '#ff5252' };
+        return colors[value?.[0]] || '#888';
+      }
+      if (type === 'rank') {
+        if (value <= 30) return '#00c853';
+        if (value <= 60) return '#ffd600';
+        return '#ff9100';
+      }
+      if (value >= 90) return '#00c853';
+      if (value >= 80) return '#69f0ae';
+      if (value >= 70) return '#ffd600';
+      return '#ff9100';
+    }
+
+    function renderFilterButtons() {
+      const sectors = [...new Set(stocks.map(s => s.sector))];
+      const container = document.getElementById('filter-buttons');
+      
+      container.innerHTML = `
+        <button class="filter-btn ${currentFilter === 'all' ? 'active' : ''}" data-filter="all">All</button>
+        ${sectors.map(s => `<button class="filter-btn ${currentFilter === s ? 'active' : ''}" data-filter="${s}">${s.slice(0,4)}</button>`).join('')}
+      `;
+
+      container.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          renderFilterButtons();
+          renderTable();
+        });
+      });
+    }
+
+    function renderTable() {
+      let filtered = [...stocks];
+      
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(s => s.sector === currentFilter);
+      }
+
+      filtered.sort((a, b) => {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
+        const modifier = sortConfig.direction === 'asc' ? 1 : -1;
+        if (typeof aVal === 'number') return (aVal - bVal) * modifier;
+        return String(aVal).localeCompare(String(bVal)) * modifier;
+      });
+
+      document.getElementById('stock-count').textContent = `${filtered.length} Stocks`;
+
+      const tbody = document.getElementById('stock-table-body');
+      tbody.innerHTML = filtered.map(stock => `
+        <tr class="${selectedStock?.symbol === stock.symbol ? 'selected' : ''}" data-symbol="${stock.symbol}">
+          <td>
+            <div class="symbol-cell">
+              <span class="symbol-text">${stock.symbol}</span>
+              <span class="sector-badge">${stock.industry || stock.sector}</span>
+            </div>
+          </td>
+          <td class="${getRatingColor(stock.compositeRating)}"><strong>${stock.compositeRating}</strong></td>
+          <td class="${getRatingColor(stock.epsRating)}">${stock.epsRating}</td>
+          <td class="${getRatingColor(stock.rsRating)}">${stock.rsRating}</td>
+          <td class="${getRatingColor(stock.accDisRating, 'accDis')}">${stock.accDisRating}</td>
+          <td class="${getRatingColor(stock.groupRank, 'group')}">${stock.groupRank}</td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('tr').forEach(row => {
+        row.addEventListener('click', () => {
+          const symbol = row.dataset.symbol;
+          selectedStock = stocks.find(s => s.symbol === symbol);
+          renderTable();
+          updateAllWidgets();
+        });
+      });
+
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        const key = th.dataset.sort;
+        const baseText = th.textContent.replace(/ [▼▲]/, '');
+        const arrow = sortConfig.key === key ? (sortConfig.direction === 'desc' ? ' ▼' : ' ▲') : '';
+        th.innerHTML = `${baseText}<span class="sort-arrow">${arrow}</span>`;
+      });
+    }
+
+    function updateChartHeader() {
+      if (!selectedStock) return;
+      document.getElementById('chart-symbol').textContent = selectedStock.symbol;
+      document.getElementById('chart-name').textContent = selectedStock.name;
+      document.getElementById('chart-industry').textContent = `${selectedStock.industry} (Rank: ${selectedStock.groupRank})`;
+
+      const ratingsContainer = document.getElementById('chart-ratings');
+      const ratings = [
+        { label: 'Comp', value: selectedStock.compositeRating, type: 'number' },
+        { label: 'EPS', value: selectedStock.epsRating, type: 'number' },
+        { label: 'RS', value: selectedStock.rsRating, type: 'number' },
+        { label: 'A/D', value: selectedStock.accDisRating, type: 'letter' },
+        { label: 'SMR', value: selectedStock.smrRating, type: 'letter' },
+        { label: 'Group', value: selectedStock.groupRank, type: 'rank' },
+      ];
+
+      ratingsContainer.innerHTML = ratings.map(r => `
+        <div class="rating-badge">
+          <span class="rating-label">${r.label}</span>
+          <span class="rating-value" style="color: ${getRatingHexColor(r.value, r.type)}">${r.value}</span>
+        </div>
+      `).join('');
+    }
+
+    function updateAllWidgets() {
+      if (!selectedStock) return;
+      updateChartHeader();
+      loadChart(selectedStock.symbol, currentInterval);
+      loadTechnicalAnalysis(selectedStock.symbol);
+      loadSymbolProfile(selectedStock.symbol);
+      loadFinancials(selectedStock.symbol);
+    }
+
+    // Event Handlers
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort;
+        if (sortConfig.key === key) {
+          sortConfig.direction = sortConfig.direction === 'desc' ? 'asc' : 'desc';
+        } else {
+          sortConfig.key = key;
+          sortConfig.direction = 'desc';
+        }
+        renderTable();
+      });
+    });
+
+    document.querySelectorAll('.timeframe-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentInterval = btn.dataset.interval;
+        if (selectedStock) loadChart(selectedStock.symbol, currentInterval);
+      });
+    });
+
+    function updateTimestamp() {
+      document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+    }
+
+    // Initialize
+    function init() {
+      updateTimestamp();
+      setInterval(updateTimestamp, 1000);
+      loadData();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

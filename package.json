@@ -1,0 +1,22 @@
+{
+  "name": "canslim-scanner",
+  "version": "1.0.0",
+  "description": "CANSLIM Stock Scanner with live TradingView charts and automated daily updates",
+  "main": "scripts/fetch-data.js",
+  "scripts": {
+    "fetch": "node scripts/fetch-data.js",
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "canslim",
+    "stock-scanner",
+    "tradingview",
+    "investing",
+    "william-oneil"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
