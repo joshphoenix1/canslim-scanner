@@ -195,6 +195,39 @@
     .rating-label { font-size: 8px; color: #8b949e; text-transform: uppercase; }
     .rating-value { font-size: 12px; font-weight: 700; }
 
+    .finviz-criteria {
+      display: flex;
+      gap: 12px;
+      padding: 6px 12px;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+      flex-wrap: wrap;
+      font-size: 9px;
+    }
+
+    .finviz-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      background: #161b22;
+      border-radius: 4px;
+      border: 1px solid #21262d;
+    }
+
+    .finviz-item.pass { border-color: #3fb950; background: rgba(63, 185, 80, 0.1); }
+    .finviz-item.fail { border-color: #6e7681; }
+
+    .finviz-label { color: #8b949e; }
+    .finviz-value { font-weight: 600; }
+    .finviz-value.positive { color: #3fb950; }
+    .finviz-value.negative { color: #f85149; }
+    .finviz-value.neutral { color: #8b949e; }
+
+    .finviz-check { font-size: 10px; }
+    .finviz-check.pass { color: #3fb950; }
+    .finviz-check.fail { color: #6e7681; }
+
     .timeframe-selector { display: flex; gap: 4px; }
 
     .timeframe-btn {
@@ -308,6 +341,7 @@
               <th data-sort="epsRating">EPS</th>
               <th data-sort="rsRating">RS</th>
               <th data-sort="accDisRating">A/D</th>
+              <th data-sort="instGrowthScore">I/G</th>
               <th data-sort="groupRank">Grp</th>
             </tr>
           </thead>
@@ -337,6 +371,9 @@
         </div>
 
         <div id="chart-ratings" class="chart-ratings"></div>
+        
+        <!-- Finviz Criteria Details -->
+        <div id="finviz-criteria" class="finviz-criteria"></div>
 
         <div class="chart-container">
           <div id="chart-loading" class="loading-overlay">
@@ -592,6 +629,7 @@
           <td class="${getRatingColor(stock.epsRating)}">${stock.epsRating}</td>
           <td class="${getRatingColor(stock.rsRating)}">${stock.rsRating}</td>
           <td class="${getRatingColor(stock.accDisRating, 'accDis')}">${stock.accDisRating}</td>
+          <td class="${getRatingColor(stock.instGrowthScore)}" title="Inst Trans: ${stock.instTrans ?? 'N/A'}%, EPS QoQ: ${stock.epsQoQ ?? 'N/A'}%, Short: ${stock.shortFloat ?? 'N/A'}%, EPS NxtY: ${stock.epsNextY ?? 'N/A'}%">${stock.instGrowthGrade || 'N/A'}</td>
           <td class="${getRatingColor(stock.groupRank, 'group')}">${stock.groupRank}</td>
         </tr>
       `).join('');
@@ -626,6 +664,7 @@
         { label: 'RS', value: selectedStock.rsRating, type: 'number' },
         { label: 'A/D', value: selectedStock.accDisRating, type: 'letter' },
         { label: 'SMR', value: selectedStock.smrRating, type: 'letter' },
+        { label: 'I/G', value: selectedStock.instGrowthGrade || 'N/A', type: 'letter' },
         { label: 'Group', value: selectedStock.groupRank, type: 'rank' },
       ];
 
@@ -635,6 +674,60 @@
           <span class="rating-value" style="color: ${getRatingHexColor(r.value, r.type)}">${r.value}</span>
         </div>
       `).join('');
+
+      // Render Finviz criteria
+      const finvizContainer = document.getElementById('finviz-criteria');
+      const criteria = [
+        { 
+          label: 'Inst Trans', 
+          value: selectedStock.instTrans, 
+          threshold: 5, 
+          suffix: '%',
+          desc: '> 5%'
+        },
+        { 
+          label: 'EPS Q/Q', 
+          value: selectedStock.epsQoQ, 
+          threshold: 0, 
+          suffix: '%',
+          desc: '> 0%'
+        },
+        { 
+          label: 'Short Float', 
+          value: selectedStock.shortFloat, 
+          threshold: 5, 
+          suffix: '%',
+          desc: '> 5%'
+        },
+        { 
+          label: 'EPS Next Y', 
+          value: selectedStock.epsNextY, 
+          threshold: 0, 
+          suffix: '%',
+          desc: '> 0%'
+        },
+      ];
+
+      finvizContainer.innerHTML = `
+        <span style="color: #8b949e; padding: 3px 0;">Finviz Criteria:</span>
+        ${criteria.map(c => {
+          const hasValue = c.value !== null && c.value !== undefined;
+          const pass = hasValue && c.value > c.threshold;
+          const valueClass = !hasValue ? 'neutral' : (pass ? 'positive' : 'negative');
+          const displayValue = hasValue ? c.value.toFixed(1) + c.suffix : 'N/A';
+          
+          return `
+            <div class="finviz-item ${pass ? 'pass' : 'fail'}">
+              <span class="finviz-check ${pass ? 'pass' : 'fail'}">${pass ? '✓' : '○'}</span>
+              <span class="finviz-label">${c.label} ${c.desc}:</span>
+              <span class="finviz-value ${valueClass}">${displayValue}</span>
+            </div>
+          `;
+        }).join('')}
+        <span class="finviz-item" style="border-color: #58a6ff;">
+          <span style="color: #58a6ff;">Score: ${selectedStock.instGrowthScore || 0}/99</span>
+        </span>
+      `;
     }
 
     function updateAllWidgets() {

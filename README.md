@@ -10,8 +10,6 @@ A real-time stock scanner based on William O'Neil's CANSLIM methodology, featuri
 
 **[View Live Scanner](https://joshphoenix1.github.io/canslim-scanner/)**
 
-*(Replace YOUR_USERNAME with your GitHub username after setup)*
-
 ## ✨ Features
 
 - **Real CANSLIM Ratings** calculated from actual market data:
@@ -42,7 +40,7 @@ A real-time stock scanner based on William O'Neil's CANSLIM methodology, featuri
 ### 1. Fork or Clone This Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/canslim-scanner.git
+git clone https://github.com/joshphoenix1/canslim-scanner.git
 cd canslim-scanner
 ```
 
@@ -72,7 +70,7 @@ cd canslim-scanner
 
 Your scanner will be live at:
 ```
-https://YOUR_USERNAME.github.io/canslim-scanner/
+https://joshphoenix1.github.io/canslim-scanner/
 ```
 
 ## 📁 Project Structure
